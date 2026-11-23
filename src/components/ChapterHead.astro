@@ -1,0 +1,18 @@
+---
+import type { Chapter } from '../data/portfolio';
+
+interface Props {
+  chapter: Chapter;
+  kicker?: string;
+  title?: string;
+  subtitle?: string;
+}
+const { chapter, kicker, title, subtitle } = Astro.props;
+---
+
+<header class="ch-head">
+  <p class="kicker reveal">{kicker ?? `Chapter ${chapter.numeral}`}</p>
+  <h2 class="ch-title reveal">{title ?? chapter.title}</h2>
+  <p class="ch-sub reveal">{subtitle ?? chapter.subtitle}</p>
+  <div class="meander reveal" aria-hidden="true"></div>
+</header>

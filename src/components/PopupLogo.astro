@@ -1,0 +1,341 @@
+---
+// Logo seperti buku pop-up dongeng: lapisan kertas berdiri dari halaman, lalu diam.
+// Lapisan: bayangan di halaman · latar kertas · logo · hiasan depan.
+// variant:
+//  - 'sunburst' : matahari kertas merah-emas, awan & bintang (Grape)
+//  - 'chat'     : gelembung percakapan malam dengan huruf berbagai bahasa, sapaan di tiang (Mokabi)
+//  - 'radar'    : bola radar ancaman dengan busur serangan, perisai di tiang, undakan candi (Slark)
+//  - 'ledger'   : kertas invoice bergaris dengan cap PAID, koin Rp di tiang, tumpukan berkas (Finly)
+//  - 'audit'    : papan klip biru tua dengan daftar centang, cap & kaca pembesar, deretan map arsip (Kias)
+interface Props {
+  src: string;
+  variant?: 'sunburst' | 'chat' | 'radar' | 'ledger' | 'audit';
+}
+const { src, variant = 'sunburst' } = Astro.props;
+
+const burst = (points: number, outer: number, inner: number) =>
+  Array.from({ length: points * 2 }, (_, i) => {
+    const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? outer : inner;
+    return `${(100 + r * Math.cos(a)).toFixed(1)},${(100 + r * Math.sin(a)).toFixed(1)}`;
+  }).join(' ');
+
+const star = (x: number, y: number, s: number) =>
+  `M${x} ${y - s}L${x + s * 0.3} ${y - s * 0.3}L${x + s} ${y}L${x + s * 0.3} ${y + s * 0.3}L${x} ${y + s}L${x - s * 0.3} ${y + s * 0.3}L${x - s} ${y}L${x - s * 0.3} ${y - s * 0.3}Z`;
+
+// Gelembung bicara: kotak membulat + ekor. tail = 'bl' (kiri bawah) atau 'br' (kanan bawah)
+const bubble = (x: number, y: number, w: number, h: number, r: number, tail: 'bl' | 'br', tw = 12) => {
+  const b = y + h;
+  // Sisi bawah digambar dari kanan ke kiri; ekor disisipkan di dekat sudut yang dipilih
+  const [t1, tip, t2] =
+    tail === 'br'
+      ? [x + w - r - tw * 0.2, x + w - r * 0.4, x + w - r - tw * 1.6]
+      : [x + r + tw * 1.6, x + r * 0.4, x + r + tw * 0.2];
+  return (
+    `M${x + r} ${y}H${x + w - r}Q${x + w} ${y} ${x + w} ${y + r}V${b - r}Q${x + w} ${b} ${x + w - r} ${b}` +
+    `H${t1}L${tip} ${b + tw}L${t2} ${b}` +
+    `H${x + r}Q${x} ${b} ${x} ${b - r}V${y + r}Q${x} ${y} ${x + r} ${y}Z`
+  );
+};
+
+// Huruf dari berbagai bahasa yang "melayang" di dalam gelembung
+const glyphs: [string, number, number, number, number][] = [
+  ['A', 38, 52, 19, -12],
+  ['あ', 70, 36, 17, 8],
+  ['ü', 104, 30, 15, 4],
+  ['文', 138, 38, 16, -6],
+  ['Ñ', 30, 104, 16, 10],
+  ['한', 166, 96, 15, -8],
+];
+// Perisai kecil (lencana) berpusat di (x, y) dengan lebar s
+const shield = (x: number, y: number, s: number) =>
+  `M${x} ${y - s * 0.62}L${x + s / 2} ${y - s * 0.42}V${y}Q${x + s / 2} ${y + s * 0.42} ${x} ${y + s * 0.7}` +
+  `Q${x - s / 2} ${y + s * 0.42} ${x - s / 2} ${y}V${y - s * 0.42}Z`;
+
+// Garis lintang (elips mendatar) & bujur (elips tegak) bola radar berpusat di (100, 96), r 84
+const R = 84;
+const lat = [-0.66, -0.33, 0, 0.33, 0.66].map((k) => ({ y: 96 + k * R, rx: R * Math.sqrt(1 - k * k) }));
+const lon = [0.3, 0.62, 0.88].map((k) => k * R);
+// Busur serangan: titik asal → sasaran, melengkung ke atas
+const arcs: [number, number, number, number][] = [
+  [34, 118, 112, 70],
+  [150, 132, 70, 58],
+  [60, 70, 162, 92],
+  [132, 40, 46, 102],
+];
+const arcPath = ([x1, y1, x2, y2]: number[]) => `M${x1} ${y1}Q${(x1 + x2) / 2} ${Math.min(y1, y2) - 34} ${x2} ${y2}`;
+
+// Kertas invoice dengan tepi bawah bergerigi (seperti struk)
+const receipt = (() => {
+  const [x0, x1, top, bottom, teeth] = [24, 176, 6, 172, 12];
+  const w = (x1 - x0) / teeth;
+  let d = `M${x0 + 8} ${top}H${x1 - 8}Q${x1} ${top} ${x1} ${top + 8}V${bottom}`;
+  for (let i = teeth; i > 0; i--) d += `L${x0 + (i - 0.5) * w} ${bottom - 7}L${x0 + (i - 1) * w} ${bottom}`;
+  return d + `V${top + 8}Q${x0} ${top} ${x0 + 8} ${top}Z`;
+})();
+const ledgerRows = Array.from({ length: 9 }, (_, i) => 52 + i * 12);
+const coins = [
+  { x: 16, y: 60, r: 11 },
+  { x: 184, y: 44, r: 12 },
+];
+
+// Papan klip audit: baris daftar centang di bagian atas (di atas logo)
+const checklist = [
+  { y: 34, w: 62, done: true },
+  { y: 50, w: 48, done: true },
+  { y: 66, w: 56, done: false },
+];
+const binders = [
+  { x: 14, w: 22, h: 30, c: '#1d3a6b' },
+  { x: 38, w: 18, h: 26, c: '#8a2a30' },
+  { x: 58, w: 24, h: 33, c: '#c9a24c' },
+  { x: 120, w: 20, h: 28, c: '#2f6e5a' },
+  { x: 142, w: 24, h: 32, c: '#1d3a6b' },
+  { x: 168, w: 18, h: 25, c: '#8a2a30' },
+];
+
+const glyphFont = 'font-family: var(--font-cinzel), serif; font-weight: 700';
+const greetFont = 'font-family: var(--font-hand), cursive; font-weight: 700';
+---
+
+<span class="popup" aria-hidden="true">
+  <span class="pop-crease"></span>
+  <img class="pop-shadow" src={src} alt="" draggable="false" />
+  {
+    variant === 'chat' ? (
+      <svg class="pop-layer pop-back" viewBox="0 0 200 200">
+        {/* gelembung balasan kecil di belakang (kanan atas) */}
+        <path d={bubble(130, 0, 68, 44, 20, 'br', 10)} fill="#1f5d63" stroke="#123c40" stroke-width="1" />
+        <path d={bubble(134, 4, 60, 36, 16, 'br', 7)} fill="none" stroke="#c9a24c" stroke-width="1.4" />
+        <g fill="#f1d68f">
+          <circle cx="152" cy="22" r="3" />
+          <circle cx="164" cy="22" r="3" />
+          <circle cx="176" cy="22" r="3" />
+        </g>
+        {/* gelembung utama: langit malam berbingkai emas */}
+        <path d={bubble(8, 8, 176, 166, 56, 'bl', 16)} fill="#241e57" stroke="#15113a" stroke-width="1" />
+        <path d={bubble(14, 14, 164, 154, 50, 'bl', 12)} fill="#c9a24c" />
+        <path d={bubble(18, 18, 156, 146, 46, 'bl', 10)} fill="#352d7c" />
+        <g fill="#f1d68f" opacity="0.85">
+          <circle cx="50" cy="80" r="1.1" />
+          <circle cx="120" cy="66" r="1.3" />
+          <circle cx="150" cy="86" r="1" />
+          <circle cx="78" cy="60" r="0.9" />
+          <circle cx="40" cy="132" r="1.2" />
+          <circle cx="152" cy="138" r="1" />
+        </g>
+        {glyphs.map(([c, x, y, s, rot]) => (
+          <text x={x} y={y} font-size={s} fill="#e9d3a0" opacity="0.8" text-anchor="middle" transform={`rotate(${rot} ${x} ${y})`} style={glyphFont}>
+            {c}
+          </text>
+        ))}
+      </svg>
+    ) : variant === 'audit' ? (
+      <svg class="pop-layer pop-back" viewBox="0 0 200 200">
+        {/* papan klip biru tua berbingkai emas, penjepit logam di atas */}
+        <rect x="6" y="10" width="188" height="168" rx="12" fill="#131b33" stroke="#0a0f1f" stroke-width="1" />
+        <rect x="11" y="15" width="178" height="158" rx="9" fill="none" stroke="#c9a24c" stroke-width="1.6" />
+        <path d="M78 4H122Q128 4 128 10V20H72V10Q72 4 78 4Z" fill="#c9a24c" stroke="#6b4e1c" stroke-width="0.9" />
+        <circle cx="100" cy="11" r="3" fill="#131b33" />
+        {/* daftar centang */}
+        {checklist.map(({ y, w, done }) => (
+          <Fragment>
+            <rect x="40" y={y - 5} width="10" height="10" rx="2" fill="none" stroke="#f1d68f" stroke-width="1.1" />
+            {done && <path d={`M42 ${y}l3 3 5-6`} fill="none" stroke="#5fd39a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />}
+            <rect x="56" y={y - 1.5} width={w} height="3" rx="1.5" fill="#3a4870" />
+          </Fragment>
+        ))}
+        <text x="160" y="40" font-size="8" fill="#c9a24c" text-anchor="end" letter-spacing="1.5" style={glyphFont}>
+          AUDIT
+        </text>
+        <text x="160" y="52" font-size="6.5" fill="#8ea0c8" text-anchor="end" letter-spacing="1" style={glyphFont}>
+          FY 2026
+        </text>
+      </svg>
+    ) : variant === 'ledger' ? (
+      <svg class="pop-layer pop-back" viewBox="0 0 200 200">
+        {/* kertas invoice: pita teal, garis buku besar, kolom nominal */}
+        <path d={receipt} fill="#fffaf0" stroke="#8a7a5a" stroke-width="1" />
+        <path d="M24 34V14Q24 6 32 6H168Q176 6 176 14V34Z" fill="#0f8f7e" />
+        <text x="100" y="25" font-size="10.5" fill="#f1d68f" text-anchor="middle" letter-spacing="3" style={glyphFont}>INVOICE</text>
+        <g stroke="#a9d3cb" stroke-width="0.8">
+          {ledgerRows.map((y) => <path d={`M34 ${y}H166`} />)}
+        </g>
+        <path d="M134 44V158" stroke="#e6a3a0" stroke-width="0.8" />
+        <g fill="#0f8f7e" opacity="0.55">
+          {ledgerRows.slice(0, 8).map((y, i) => <rect x="140" y={y - 7} width={14 + ((i * 7) % 12)} height="3" rx="1.5" />)}
+        </g>
+        {/* cap karet PAID */}
+        <g transform="rotate(-16 150 62)" opacity="0.85">
+          <circle cx="150" cy="62" r="19" fill="none" stroke="#b3322f" stroke-width="2" />
+          <circle cx="150" cy="62" r="15" fill="none" stroke="#b3322f" stroke-width="0.8" />
+          <text x="150" y="66" font-size="10" fill="#b3322f" text-anchor="middle" letter-spacing="1" style={glyphFont}>PAID</text>
+        </g>
+      </svg>
+    ) : variant === 'radar' ? (
+      <svg class="pop-layer pop-back" viewBox="0 0 200 200">
+        {/* bola radar: cincin emas, laut malam, garis lintang & bujur */}
+        <circle cx="100" cy="96" r="96" fill="#2a1d10" stroke="#1a1208" stroke-width="1" />
+        <circle cx="100" cy="96" r="90" fill="#c9a24c" />
+        <circle cx="100" cy="96" r={R + 1} fill="#0e1424" />
+        <g fill="none" stroke="#2f3f63" stroke-width="0.9">
+          {lat.map((l) => <ellipse cx="100" cy={l.y} rx={l.rx} ry={l.rx * 0.08} />)}
+          {lon.map((rx) => <ellipse cx="100" cy="96" rx={rx} ry={R} />)}
+          <path d={`M100 ${96 - R}V${96 + R}`} />
+        </g>
+        {/* sapuan radar */}
+        <path d={`M100 96L${100 + R} 96A${R} ${R} 0 0 0 ${(100 + R * Math.cos(-0.75)).toFixed(1)} ${(96 + R * Math.sin(-0.75)).toFixed(1)}Z`} fill="#c0392b" opacity="0.28" />
+        <circle cx="100" cy="96" r={R * 0.55} fill="none" stroke="#c0392b" stroke-width="0.7" stroke-dasharray="2 3" opacity="0.7" />
+        {/* serangan masuk */}
+        <g fill="none" stroke="#f1d68f" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="4 2.5">
+          {arcs.map((a) => <path d={arcPath(a)} />)}
+        </g>
+        <g>
+          {arcs.map(([x1, y1, x2, y2]) => (
+            <Fragment>
+              <circle cx={x1} cy={y1} r="2.2" fill="#f1d68f" />
+              <circle cx={x2} cy={y2} r="4.5" fill="none" stroke="#f1d68f" stroke-width="0.9" />
+              <circle cx={x2} cy={y2} r="2" fill="#fff4d0" />
+            </Fragment>
+          ))}
+        </g>
+      </svg>
+    ) : (
+      <svg class="pop-layer pop-back" viewBox="0 0 200 200">
+        <polygon points={burst(18, 99, 80)} fill="#6b1d22" stroke="#4b151a" stroke-width="1" />
+        <polygon points={burst(18, 91, 75)} fill="#c9a24c" />
+        <polygon points={burst(18, 84, 70)} fill="#8a2a30" />
+      </svg>
+    )
+  }
+  <img class="pop-layer pop-logo" src={src} alt="" draggable="false" />
+  {
+    variant === 'chat' ? (
+      <svg class="pop-layer pop-front" viewBox="0 0 200 200">
+        {/* sapaan di tiang kertas */}
+        <g fill="none" stroke="#8a6a2a" stroke-width="0.7">
+          <path d="M18 196V74" />
+          <path d="M184 196V56" />
+        </g>
+        <path d={bubble(2, 50, 34, 20, 7, 'br', 5)} fill="#fbf4e3" stroke="#8a6a2a" stroke-width="0.8" />
+        <text x="19" y="64.5" font-size="10" fill="#4a2c8c" text-anchor="middle" style={greetFont}>Hi!</text>
+        <path d={bubble(164, 32, 34, 20, 7, 'bl', 5)} fill="#f3e3ff" stroke="#8a6a2a" stroke-width="0.8" />
+        <text x="181" y="46.5" font-size="10" fill="#1f5d63" text-anchor="middle" style={greetFont}>Hola</text>
+        {/* bukit kertas bergelombang: lavender di belakang, krem di depan */}
+        <path
+          d="M10 200V186C26 174 44 174 60 182S94 192 112 182 148 170 166 180 186 186 192 184V200Z"
+          fill="#ddd0f2"
+          stroke="#9a86c6"
+          stroke-width="0.8"
+        />
+        <path
+          d="M0 200V193C14 185 30 185 46 191S78 197 96 190 132 183 150 190 184 196 200 189V200Z"
+          fill="#fbf4e3"
+          stroke="#b89a68"
+          stroke-width="0.8"
+        />
+      </svg>
+    ) : variant === 'audit' ? (
+      <svg class="pop-layer pop-front" viewBox="0 0 200 200">
+        {/* cap AUDITED (kiri) & kaca pembesar (kanan) di tiang */}
+        <g fill="none" stroke="#8a6a2a" stroke-width="0.7">
+          <path d="M18 196V74" />
+          <path d="M182 196V62" />
+        </g>
+        <circle cx="18" cy="60" r="14" fill="#fbf4e3" stroke="#2f6e5a" stroke-width="1.6" />
+        <circle cx="18" cy="60" r="10.5" fill="none" stroke="#2f6e5a" stroke-width="0.6" />
+        <path d="M12 60l4 4 8-9" fill="none" stroke="#2f6e5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M190 58L198 66" stroke="#6b4e1c" stroke-width="4" stroke-linecap="round" />
+        <circle cx="182" cy="50" r="11" fill="#d9ecf5" fill-opacity="0.75" stroke="#c9a24c" stroke-width="2.4" />
+        <path d="M176 45q3-4 8-4" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" />
+        {/* deretan map arsip */}
+        {binders.map(({ x, w, h, c }) => (
+          <Fragment>
+            <rect x={x} y={192 - h} width={w} height={h} rx="1.5" fill={c} stroke="#2a1d10" stroke-width="0.6" />
+            <rect x={x + w * 0.2} y={192 - h + 5} width={w * 0.6} height="5" rx="1" fill="#fbf4e3" opacity="0.85" />
+            <circle cx={x + w / 2} cy={192 - 7} r="2" fill="none" stroke="#fbf4e3" stroke-width="0.8" opacity="0.8" />
+          </Fragment>
+        ))}
+        <path
+          d="M0 200V193C18 190 42 195 64 192S104 189 126 193 166 195 184 191 196 192 200 194V200Z"
+          fill="#fbf4e3"
+          stroke="#b89a68"
+          stroke-width="0.8"
+        />
+      </svg>
+    ) : variant === 'ledger' ? (
+      <svg class="pop-layer pop-front" viewBox="0 0 200 200">
+        {/* koin Rp di tiang */}
+        <g fill="none" stroke="#8a6a2a" stroke-width="0.7">
+          <path d="M16 196V71" />
+          <path d="M184 196V56" />
+        </g>
+        {coins.map(({ x, y, r }) => (
+          <Fragment>
+            <circle cx={x} cy={y} r={r} fill="#e2b64a" stroke="#8a6a2a" stroke-width="0.9" />
+            <circle cx={x} cy={y} r={r * 0.78} fill="none" stroke="#a8812f" stroke-width="0.6" />
+            <text x={x} y={y + r * 0.32} font-size={r * 0.85} fill="#6b4e1c" text-anchor="middle" style={glyphFont}>Rp</text>
+          </Fragment>
+        ))}
+        {/* tumpukan berkas: map mint & lembar krem bergeser */}
+        <path d="M10 200V186L40 181H92L98 185H190V200Z" fill="#bfe3d8" stroke="#6e9e91" stroke-width="0.8" />
+        <path d="M18 186L150 178L184 186" fill="none" stroke="#fbf4e3" stroke-width="3" />
+        <path d="M18 186L150 178L184 186" fill="none" stroke="#b89a68" stroke-width="0.5" />
+        <path
+          d="M0 200V193C20 189 44 194 66 191S104 188 126 192 168 195 184 190 196 191 200 193V200Z"
+          fill="#fbf4e3"
+          stroke="#b89a68"
+          stroke-width="0.8"
+        />
+      </svg>
+    ) : variant === 'radar' ? (
+      <svg class="pop-layer pop-front" viewBox="0 0 200 200">
+        {/* perisai emas di tiang */}
+        <g fill="none" stroke="#8a6a2a" stroke-width="0.7">
+          <path d="M16 196V66" />
+          <path d="M184 196V50" />
+        </g>
+        <path d={shield(16, 58, 20)} fill="#f1d68f" stroke="#6b4e1c" stroke-width="0.9" />
+        <path d={shield(16, 58, 12)} fill="#c0392b" />
+        <path d={shield(184, 42, 22)} fill="#f1d68f" stroke="#6b4e1c" stroke-width="0.9" />
+        <path d={shield(184, 42, 13)} fill="#1d2338" />
+        <path d="M180 42l3 3 6-7" fill="none" stroke="#f1d68f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+        {/* undakan candi: batu kelabu di belakang, kertas krem di depan */}
+        <path
+          d="M8 200V188H22V182H40V176H62V171H138V176H160V182H178V188H192V200Z"
+          fill="#b9ae98"
+          stroke="#7d705a"
+          stroke-width="0.8"
+        />
+        <path d="M62 176H138M40 182H160M22 188H178" stroke="#7d705a" stroke-width="0.5" />
+        <path
+          d="M0 200V193C18 189 40 195 60 191S98 188 118 192 160 195 178 190 196 192 200 194V200Z"
+          fill="#fbf4e3"
+          stroke="#b89a68"
+          stroke-width="0.8"
+        />
+      </svg>
+    ) : (
+      <svg class="pop-layer pop-front" viewBox="0 0 200 200">
+        <g fill="none" stroke="#8a6a2a" stroke-width="0.7">
+          <path d="M22 196V58" />
+          <path d="M178 196V44" />
+        </g>
+        <path d={star(22, 50, 10)} fill="#f1d68f" stroke="#8a6a2a" stroke-width="0.8" />
+        <path d={star(178, 36, 12)} fill="#f1d68f" stroke="#8a6a2a" stroke-width="0.8" />
+        <path
+          d="M12 200V186C18 174 34 174 40 182C46 170 66 170 72 182C80 172 98 172 104 183C112 170 134 170 140 182C148 173 166 174 172 184C178 178 186 180 188 188V200Z"
+          fill="#e9dabb"
+          stroke="#b89a68"
+          stroke-width="0.8"
+        />
+        <path
+          d="M0 200V194C5 184 20 183 26 190C32 180 52 180 58 191C66 182 84 182 90 192C98 181 120 181 126 192C134 183 152 183 158 192C164 184 186 184 200 195V200Z"
+          fill="#fbf4e3"
+          stroke="#b89a68"
+          stroke-width="0.8"
+        />
+      </svg>
+    )
+  }
+</span>

@@ -1,0 +1,347 @@
+---
+// Peta kuno perjalanan, membentang di dua halaman (gaya peta ukiran tinta + cat air pudar).
+// Kedua halaman memuat peta yang sama (1000×600 unit); `half` menentukan bagian mana yang terlihat,
+// sehingga kiri & kanan menyambung tepat di lipatan buku. Semua bentuk acak memakai seed tetap,
+// jadi kedua halaman selalu identik.
+import type { Chapter } from '../data/portfolio';
+
+interface Props {
+  half: 'left' | 'right';
+  chapter: Chapter;
+  milestones: { year: string; title: string; place: string; desc: string }[]; // terlama → terbaru
+}
+const { half, chapter, milestones } = Astro.props;
+
+const INK = '#4a3420';
+const f = (n: number) => n.toFixed(1);
+
+// Bilangan acak dengan seed tetap
+function rng(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rand = rng(1907);
+
+// ── Garis pantai fraktal ──
+function fractal(points: [number, number][], depth: number, rough: number): [number, number][] {
+  let pts = points;
+  for (let d = 0; d < depth; d++) {
+    const next: [number, number][] = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [x1, y1] = pts[i];
+      const [x2, y2] = pts[i + 1];
+      const len = Math.hypot(x2 - x1, y2 - y1);
+      const off = (rand() - 0.5) * len * rough;
+      next.push([x1, y1], [(x1 + x2) / 2 - ((y2 - y1) / len) * off, (y1 + y2) / 2 + ((x2 - x1) / len) * off]);
+    }
+    next.push(pts[pts.length - 1]);
+    pts = next;
+  }
+  return pts;
+}
+const line = (pts: [number, number][]) => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${f(x)} ${f(y)}`).join('');
+
+const coastPts = fractal(
+  [
+    [-10, 168],
+    [120, 184],
+    [235, 166],
+    [330, 196],
+    [455, 178],
+    [540, 210],
+    [650, 186],
+    [760, 214],
+    [870, 198],
+    [1010, 222],
+  ],
+  5,
+  0.55,
+);
+const coast = line(coastPts);
+const land = `${coast}L1010 610L-10 610Z`;
+const islandPts = fractal(
+  [
+    [430, 92],
+    [462, 70],
+    [505, 82],
+    [512, 108],
+    [470, 120],
+    [430, 92],
+  ],
+  4,
+  0.5,
+);
+const island = `${line(islandPts)}Z`;
+// Garis air bertingkat sejajar pantai (khas peta ukiran)
+const waterlines = [7, 14, 22, 31, 41];
+
+// ── Gunung berarsir ──
+function mountain(x: number, base: number, s: number) {
+  const peak = base - s * 1.25;
+  const outline = `M${f(x - s)} ${f(base)}Q${f(x - s * 0.45)} ${f(peak + s * 0.35)} ${f(x)} ${f(peak)}Q${f(x + s * 0.4)} ${f(peak + s * 0.4)} ${f(x + s)} ${f(base)}`;
+  let hatch = '';
+  const n = Math.max(4, Math.round(s / 3.2));
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    const hx = x + s * t * 0.95;
+    const hy = peak + (base - peak) * (0.15 + t * 0.85) - 2;
+    hatch += `M${f(hx)} ${f(hy)}L${f(hx - s * 0.18)} ${f(base - 1)}`;
+  }
+  return { outline, hatch };
+}
+const mountains = [
+  [118, 270, 22],
+  [150, 274, 30],
+  [192, 266, 38],
+  [236, 276, 26],
+  [268, 282, 18],
+  [552, 244, 22],
+  [590, 238, 30],
+  [628, 246, 20],
+  [470, 336, 16],
+].map(([x, b, s]) => mountain(x, b, s));
+
+// ── Hutan: pohon-pohon kecil ──
+function forest(cx: number, cy: number, n: number, spread: number) {
+  const r = rng(cx * 7 + cy);
+  return Array.from({ length: n }, () => {
+    const x = cx + (r() - 0.5) * spread * 2;
+    const y = cy + (r() - 0.5) * spread * 0.7;
+    const s = 5 + r() * 3;
+    return { x, y, s };
+  }).sort((a, b) => a.y - b.y);
+}
+const trees = [...forest(272, 560, 16, 48), ...forest(430, 552, 9, 26), ...forest(920, 560, 13, 46), ...forest(78, 250, 8, 24)];
+
+// ── Sungai dari pegunungan ke danau ──
+const river = line(
+  fractal(
+    [
+      [612, 250],
+      [690, 300],
+      [742, 380],
+      [738, 470],
+      [760, 540],
+    ],
+    3,
+    0.35,
+  ),
+);
+
+// ── Garis arah angin dari kompas ──
+const COMPASS = { x: 900, y: 118 };
+const rhumbs = Array.from({ length: 16 }, (_, i) => {
+  const a = (i / 16) * Math.PI * 2;
+  return `M${COMPASS.x} ${COMPASS.y}L${f(COMPASS.x + Math.cos(a) * 1400)} ${f(COMPASS.y + Math.sin(a) * 1400)}`;
+}).join('');
+
+// ── Kompas mawar angin ──
+const roseArms = (r: number, n: number, rot: number, light: string, dark: string) =>
+  Array.from({ length: n }, (_, i) => {
+    const a = rot + (i / n) * Math.PI * 2;
+    const side = r * 0.19;
+    const tip = `${f(Math.cos(a) * r)},${f(Math.sin(a) * r)}`;
+    const l = `${f(Math.cos(a - Math.PI / 2) * side)},${f(Math.sin(a - Math.PI / 2) * side)}`;
+    const rr = `${f(Math.cos(a + Math.PI / 2) * side)},${f(Math.sin(a + Math.PI / 2) * side)}`;
+    return [
+      { points: `0,0 ${tip} ${l}`, fill: light },
+      { points: `0,0 ${tip} ${rr}`, fill: dark },
+    ];
+  }).flat();
+const rose16 = roseArms(30, 8, Math.PI / 8, '#efe1c1', '#9c8a66');
+const rose8 = roseArms(42, 4, Math.PI / 4, '#e3c983', '#8a6a2a');
+const rose4 = roseArms(56, 4, -Math.PI / 2, '#f4ead2', '#6b1d22');
+const roseTicks = Array.from({ length: 64 }, (_, i) => {
+  const a = (i / 64) * Math.PI * 2;
+  const r1 = i % 8 === 0 ? 58 : i % 2 === 0 ? 61 : 63;
+  return `M${f(Math.cos(a) * r1)} ${f(Math.sin(a) * r1)}L${f(Math.cos(a) * 65)} ${f(Math.sin(a) * 65)}`;
+}).join('');
+
+// ── Bingkai bergaris lintang-bujur ──
+const graticule = (() => {
+  let d = '';
+  for (let x = 16, k = 0; x < 984; x += 40, k++) if (k % 2 === 0) d += `M${x} 6h${Math.min(40, 984 - x)}v8h-${Math.min(40, 984 - x)}ZM${x} 586h${Math.min(40, 984 - x)}v8h-${Math.min(40, 984 - x)}Z`;
+  for (let y = 16, k = 0; y < 584; y += 40, k++) if (k % 2 === 0) d += `M6 ${y}v${Math.min(40, 584 - y)}h8v-${Math.min(40, 584 - y)}ZM986 ${y}v${Math.min(40, 584 - y)}h8v-${Math.min(40, 584 - y)}Z`;
+  return d;
+})();
+
+// ── Jalur perjalanan & tahap ──
+const SLOTS_4 = [
+  { x: 95, y: 520, card: { x: 40, y: 330 } },
+  { x: 360, y: 388, card: { x: 268, y: 172 } },
+  { x: 615, y: 470, card: { x: 525, y: 252 } },
+  { x: 852, y: 304, card: { x: 762, y: 358 } },
+];
+// Dua tahap saja: satu per halaman, dengan kartu lebih lebar
+const SLOTS_2 = [
+  { x: 425, y: 512, card: { x: 232, y: 322 } },
+  { x: 745, y: 475, card: { x: 610, y: 292 } },
+];
+const few = milestones.length <= 2;
+const SLOTS = few ? SLOTS_2 : SLOTS_4;
+const CARD_W = few ? 250 : 200;
+const stops = milestones.slice(0, SLOTS.length).map((m, i) => ({ ...m, ...SLOTS[i], numeral: ['I', 'II', 'III', 'IV'][i] }));
+const end = { x: 990, y: 230 };
+const pts = [...(few ? [{ x: 60, y: 500 }] : []), ...stops.map(({ x, y }) => ({ x, y })), end];
+const path = pts
+  .map((p, i) => {
+    if (i === 0) return `M${p.x} ${p.y}`;
+    const p0 = pts[i - 2] ?? pts[i - 1];
+    const p1 = pts[i - 1];
+    const p3 = pts[i + 1] ?? p;
+    const c1 = { x: p1.x + (p.x - p0.x) / 6, y: p1.y + (p.y - p0.y) / 6 };
+    const c2 = { x: p.x - (p3.x - p1.x) / 6, y: p.y - (p3.y - p1.y) / 6 };
+    return `C${f(c1.x)} ${f(c1.y)} ${f(c2.x)} ${f(c2.y)} ${p.x} ${p.y}`;
+  })
+  .join('');
+
+const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(2)}%`;
+const id = (name: string) => `${name}-${half}`;
+---
+
+<div class:list={['map-half', `map-${half}`]} aria-hidden={half === 'right' ? 'true' : undefined}>
+  <div class="map-layer">
+    <svg class="map-art" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <!-- Laut = seluruh peta dikurangi daratan -->
+        <clipPath id={id('sea')}><path d={`M-10 -10H1010V610H-10Z${land}`} clip-rule="evenodd" /></clipPath>
+      </defs>
+
+      <!-- Laut: sapuan cat air & garis air bertingkat -->
+      <rect x="0" y="0" width="1000" height="260" fill="#7f9c97" opacity="0.28" clip-path={`url(#${id('sea')})`} />
+      <g fill="none" stroke={INK} stroke-width="0.7" clip-path={`url(#${id('sea')})`}>
+        {waterlines.map((dy, i) => (
+          <path d={coast} transform={`translate(0 -${dy})`} opacity={(0.55 - i * 0.1).toFixed(2)} />
+        ))}
+        {waterlines.slice(0, 4).map((dy, i) => (
+          <path d={island} transform={`translate(${f(466 * (1 - (1 + dy / 60)))} ${f(95 * (1 - (1 + dy / 60)))}) scale(${f(1 + dy / 60)})`} opacity={(0.5 - i * 0.1).toFixed(2)} />
+        ))}
+      </g>
+      <!-- Garis arah angin -->
+      <path d={rhumbs} stroke={INK} stroke-width="0.5" opacity="0.28" />
+
+      <!-- Daratan: cat air pudar, tepi hijau -->
+      <path d={land} fill="#d9c08a" opacity="0.38" />
+      <path d={coast} fill="none" stroke="#7f8d58" stroke-width="16" opacity="0.22" />
+      <path d={coast} fill="none" stroke={INK} stroke-width="1.6" />
+      <path d={island} fill="#d9c08a" fill-opacity="0.55" stroke={INK} stroke-width="1.3" />
+
+      <!-- Sungai & danau -->
+      <path d={river} fill="none" stroke="#7f9c97" stroke-width="5" opacity="0.45" />
+      <path d={river} fill="none" stroke={INK} stroke-width="1" />
+      <path d="M720 548c18-22 74-24 92-4c14 16-10 36-48 36c-34 0-58-14-44-32Z" fill="#7f9c97" fill-opacity="0.35" stroke={INK} stroke-width="1.2" />
+      <path d="M732 552c16-14 56-15 70-2M738 562c14-9 44-9 56 0" fill="none" stroke={INK} stroke-width="0.5" opacity="0.5" />
+
+      <!-- Pegunungan -->
+      <g fill="none" stroke={INK} stroke-linecap="round">
+        {mountains.map((m) => (
+          <Fragment>
+            <path d={m.outline} fill="#e6d3a6" stroke-width="1.4" />
+            <path d={m.hatch} stroke-width="0.7" opacity="0.8" />
+          </Fragment>
+        ))}
+      </g>
+
+      <!-- Hutan -->
+      <g stroke={INK} stroke-width="0.8">
+        {trees.map((t) => (
+          <Fragment>
+            <path d={`M${f(t.x)} ${f(t.y)}V${f(t.y - t.s * 0.9)}`} />
+            <circle cx={f(t.x)} cy={f(t.y - t.s * 1.3)} r={f(t.s * 0.55)} fill="#9aa36c" />
+          </Fragment>
+        ))}
+      </g>
+
+      <!-- Kapal layar kuno -->
+      <g transform="translate(650 74)" stroke={INK} stroke-width="1.1" stroke-linejoin="round">
+        <path d="M-46 18Q0 30 44 16L36 32Q0 40 -38 32Z" fill="#a8845a" />
+        <path d="M-40 24H40M-36 29H34" fill="none" stroke-width="0.6" />
+        <path d="M-12 18V-34M14 18V-26M-34 18V-8" fill="none" />
+        <path d="M-12 -30Q4 -16 -12 6Q-28 -12 -12 -30Z" fill="#f2e6c8" />
+        <path d="M14 -22Q28 -8 14 10Q2 -6 14 -22Z" fill="#f2e6c8" />
+        <path d="M-34 -6L-48 12H-34Z" fill="#f2e6c8" />
+        <path d="M-12 -34L2 -30L-12 -27Z" fill="#6b1d22" stroke="none" />
+        <path d="M-60 40q8-5 16 0t16 0M30 38q8-5 16 0t16 0" fill="none" stroke-width="0.7" opacity="0.6" />
+      </g>
+
+      <!-- Kompas mawar angin -->
+      <g transform={`translate(${COMPASS.x} ${COMPASS.y})`}>
+        <circle r="66" fill="#efe1c1" fill-opacity="0.85" stroke={INK} stroke-width="1.6" />
+        <circle r="57" fill="none" stroke={INK} stroke-width="0.7" />
+        <path d={roseTicks} stroke={INK} stroke-width="0.7" />
+        {rose16.map((p) => <polygon points={p.points} fill={p.fill} stroke={INK} stroke-width="0.4" />)}
+        {rose8.map((p) => <polygon points={p.points} fill={p.fill} stroke={INK} stroke-width="0.5" />)}
+        {rose4.map((p) => <polygon points={p.points} fill={p.fill} stroke={INK} stroke-width="0.6" />)}
+        <circle r="6" fill="#c9a24c" stroke={INK} stroke-width="0.8" />
+        <circle r="2" fill={INK} />
+        <!-- Bunga lili penanda utara -->
+        <path d="M0 -88C-5 -80 -6 -73 0 -68C6 -73 5 -80 0 -88ZM0 -74C-6 -78 -14 -76 -13 -70C-10 -72 -5 -71 -2 -69ZM0 -74C6 -78 14 -76 13 -70C10 -72 5 -71 2 -69ZM-6 -67H6" fill="#6b1d22" stroke={INK} stroke-width="0.6" />
+        <g class="map-compass-letters" fill={INK} text-anchor="middle" dominant-baseline="central">
+          <text x="80">E</text><text y="80">S</text><text x="-80">W</text>
+        </g>
+      </g>
+
+      <!-- Jalur perjalanan -->
+      <path d={path} fill="none" stroke="#f3e6c4" stroke-width="7" stroke-linecap="round" opacity="0.6" />
+      <path d={path} fill="none" stroke="#8b1e24" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="7 7" />
+      {stops.map((s, i) => (
+        <g transform={`translate(${s.x} ${s.y})`}>
+          {i === stops.length - 1 ? (
+            <Fragment>
+              <circle r="26" fill="none" stroke="#8b1e24" stroke-width="1" stroke-dasharray="3 4" />
+              <path d="M-13 -13L13 13M13 -13L-13 13" stroke="#8b1e24" stroke-width="6" stroke-linecap="round" />
+            </Fragment>
+          ) : (
+            <Fragment>
+              <circle r="17" fill="#f3e6c4" stroke={INK} stroke-width="1.6" />
+              <circle r="13" fill="none" stroke={INK} stroke-width="0.6" />
+              <text class="map-pin-num" text-anchor="middle" dominant-baseline="central" fill="#6b1d22">{s.numeral}</text>
+            </Fragment>
+          )}
+        </g>
+      ))}
+
+      <!-- Nama daerah -->
+      <g class="map-region" fill={INK} text-anchor="middle">
+        <text x="470" y="152">The Sea of Ideas</text>
+        <text x="190" y="306">Learning Peaks</text>
+        <text x="664" y="572">Lake Calm</text>
+        <text x="300" y="532" class="map-region-sm">Forest of Code</text>
+      </g>
+
+      <!-- Skala -->
+      <g transform="translate(40 572)" stroke={INK} stroke-width="0.8">
+        <rect width="30" height="6" fill={INK} /><rect x="30" width="30" height="6" fill="#f3e6c4" /><rect x="60" width="30" height="6" fill={INK} /><rect x="90" width="30" height="6" fill="#f3e6c4" />
+      </g>
+
+      <!-- Bingkai -->
+      <rect x="6" y="6" width="988" height="588" fill="none" stroke={INK} stroke-width="1.6" />
+      <path d={graticule} fill={INK} opacity="0.85" />
+      <rect x="14" y="14" width="972" height="572" fill="none" stroke={INK} stroke-width="0.8" />
+    </svg>
+
+    <!-- Judul peta -->
+    <div class="map-cartouche reveal" style={`left:${pct(30, 1000)};top:${pct(28, 600)};width:${pct(300, 1000)}`}>
+      <p class="kicker">Chapter {chapter.numeral}</p>
+      <h2 class="map-title">{chapter.title}</h2>
+      <p class="map-sub">{chapter.subtitle}</p>
+    </div>
+
+    {stops.map((s, i) => (
+      <div class:list={['map-card', 'reveal', { 'map-card-lg': few }]} style={`left:${pct(s.card.x, 1000)};top:${pct(s.card.y, 600)};width:${pct(few ? CARD_W : i === stops.length - 1 ? 220 : CARD_W, 1000)}`}>
+        <p class="map-year">{s.year}{i === stops.length - 1 && <span> · You are here</span>}</p>
+        <h3 class="map-card-title">{s.title}</h3>
+        <p class="map-place">{s.place}</p>
+        <p class="map-desc">{s.desc}</p>
+      </div>
+    ))}
+
+    <p class="map-scale-label" style={`left:${pct(166, 1000)};top:${pct(575, 600)}`}>Every step counts</p>
+    <p class="map-continue" style={`left:${pct(872, 1000)};top:${pct(222, 600)}`}>to be continued…</p>
+  </div>
+</div>

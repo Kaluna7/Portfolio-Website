@@ -1,0 +1,442 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Page from '../components/Page.astro';
+import ChapterHead from '../components/ChapterHead.astro';
+import Emblem from '../components/Emblem.astro';
+import PopupLogo from '../components/PopupLogo.astro';
+import JourneyMap from '../components/JourneyMap.astro';
+import Astrolabe from '../components/Astrolabe.astro';
+import {
+  chapters,
+  posts,
+  journey,
+  profile,
+  projectGroups,
+  projectListPages,
+  projectPage,
+  projects,
+  skills,
+  socials,
+  DETAIL_PAGE,
+  detailPageCount,
+} from '../data/portfolio';
+
+const [intro, works, details, skillsCh, journeyCh, blogCh, contact] = chapters;
+const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+
+// Halaman kosong agar bab berikutnya selalu mulai di halaman kiri
+const listFiller = projectListPages % 2 === 1;
+const detailFiller = detailPageCount % 2 === 1;
+---
+
+<Layout title={`${profile.name} — Portfolio`} description={profile.tagline}>
+  <!-- Latar -->
+  <div class="scene-bg pointer-events-none fixed inset-0" aria-hidden="true">
+    <div class="astro-wrap"><Astrolabe /></div>
+  </div>
+
+  <canvas id="webgl" class="fixed inset-0 h-full w-full" aria-label="3D book"></canvas>
+  <div class="grain pointer-events-none fixed inset-0 z-40" aria-hidden="true"></div>
+
+  <!-- Hero -->
+  <header id="hero" class="hero pointer-events-none fixed inset-0 z-10">
+    <div class="hero-frame hero-reveal" aria-hidden="true">
+      <i></i><i></i><i></i><i></i>
+      <span>Portfolio · {profile.year}</span>
+    </div>
+
+    <div class="hero-inner">
+      <div class="hero-head">
+        <p class="hero-kicker hero-reveal"><span>Works &amp; Stories</span></p>
+        <h1 class="hero-name hero-reveal gold-text">{profile.name}</h1>
+        <p class="hero-role hero-reveal">{profile.role}</p>
+        <p class="hero-tagline hero-reveal">{profile.tagline}</p>
+      </div>
+
+      <div class="hero-foot">
+        <div class="hero-cta hero-reveal">
+          <button id="open-btn" class="btn-open pointer-events-auto" type="button">
+            <span>Open the Book</span>
+            <span class="arrow" aria-hidden="true">→</span>
+          </button>
+          <span class="hero-hint">or click the book</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tombol musik -->
+  <button
+    id="music-btn"
+    class="music-btn fixed z-[45]"
+    type="button"
+    aria-pressed="false"
+    aria-label="Play or pause music"
+  >
+    <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    <span class="music-label hidden md:inline">Music</span>
+  </button>
+
+  <!-- Pembaca buku -->
+  <section id="reader" class="invisible fixed inset-0 z-20 flex items-center justify-center opacity-0" aria-label="Portfolio book">
+    <button id="close-btn" class="reader-btn reader-ui fixed top-4 right-4 z-30 md:top-6 md:right-6" type="button">
+      Close Book <span aria-hidden="true">✕</span>
+    </button>
+
+    <div id="book" class="book">
+      <div id="page-left" class="sheet sheet-left"></div>
+      <div id="page-right" class="sheet sheet-right"></div>
+      <div class="gutter" aria-hidden="true"></div>
+      <div id="leaf" class="leaf" aria-hidden="true">
+        <div class="leaf-face leaf-front sheet"></div>
+        <div class="leaf-face leaf-back sheet"></div>
+      </div>
+    </div>
+
+    <nav class="reader-ui fixed bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 md:bottom-5" aria-label="Page navigation">
+      <button id="prev-btn" class="reader-btn" type="button" aria-label="Previous page">‹</button>
+      <button id="toc-btn" class="reader-btn" type="button">Contents</button>
+      <span id="page-indicator" class="min-w-16 text-center font-cinzel text-[11px] tracking-[0.2em] text-gold/80"></span>
+      <button id="next-btn" class="reader-btn" type="button" aria-label="Next page">›</button>
+    </nav>
+  </section>
+
+  <!-- Perjalanan ke masa lalu -->
+  <div id="memory" class="memory" role="dialog" aria-modal="true" aria-label="Project memories" hidden>
+    <div id="memory-stage" class="memory-stage"></div>
+    <div id="memory-flash" class="memory-flash" aria-hidden="true"></div>
+    <p id="memory-whisper" class="memory-whisper" aria-live="polite"></p>
+    <button id="memory-skip" class="reader-btn memory-corner" type="button">Skip ›</button>
+    <button id="memory-close" class="reader-btn memory-corner" type="button" hidden>Back to the present <span aria-hidden="true">✕</span></button>
+    <div id="memory-viewer" class="memory-viewer" hidden>
+      <p id="memory-count" class="memory-count"></p>
+      <figure id="memory-photo" class="memory-photo">
+        <img id="memory-img" alt="" />
+      </figure>
+      <p id="memory-caption" class="memory-caption"></p>
+      <div class="memory-nav">
+        <button id="memory-prev" class="reader-btn" type="button">‹ Previous</button>
+        <button id="memory-next" class="reader-btn" type="button">Next memory ›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loader -->
+  <div id="loader" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-night">
+    <div class="relative grid place-items-center">
+      <div class="loader-ring"></div>
+      <Emblem class="absolute h-14 w-14 text-gold" />
+    </div>
+    <p class="font-cinzel text-[11px] uppercase tracking-[0.4em] text-gold/70">Loading</p>
+  </div>
+
+  <!-- ═══════════ Halaman-halaman buku ═══════════ -->
+  <div id="page-store" hidden>
+    <!-- Halaman judul -->
+    <Page n={0} folio={false} class="pg-center">
+      <div class="frontis">
+        <p class="kicker reveal">Believe In Yourself</p>
+        <div class="emblem-wrap reveal">
+          <Emblem />
+        </div>
+        <h1 class="front-name reveal">{profile.name}</h1>
+        <div class="divider reveal"><span>✦</span></div>
+        <p class="front-role reveal">{profile.role}</p>
+        <p class="front-motto reveal">“{profile.motto}”</p>
+        <p class="front-imprint reveal">{profile.location} · {profile.year}</p>
+      </div>
+    </Page>
+
+    <!-- Daftar isi -->
+    <Page n={1}>
+      <div class="text-center">
+        <p class="kicker reveal">Inside This Book</p>
+        <h2 class="ch-title reveal">Contents</h2>
+        <div class="meander reveal" aria-hidden="true"></div>
+      </div>
+      <ol class="toc">
+        {
+          chapters.map((c) => (
+            <li class="reveal">
+              <button class="toc-item" type="button" data-goto={c.page}>
+                <span class="toc-num">{c.numeral}.</span>
+                <span class="toc-name">
+                  <span class="toc-title">{c.title}</span>
+                  <span class="toc-sub">{c.subtitle}</span>
+                </span>
+                <span class="leader" />
+                <span class="toc-page">{c.page + 1}</span>
+              </button>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="hint reveal">Choose a chapter to turn the page.</p>
+    </Page>
+
+    <!-- Introduction -->
+    <Page n={intro.page} running={intro.title} class="pg-intro">
+      <ChapterHead chapter={intro} />
+      <p class="intro-lead reveal">{profile.lead}</p>
+      <div class="intro-text">
+        {profile.about.map((p) => <p class="reveal">{p}</p>)}
+      </div>
+      <h3 class="sub-title reveal">What I Do</h3>
+      <ul class="services">
+        {
+          profile.services.map(([name, note], i) => (
+            <li class="reveal">
+              <span class="service-num">{roman[i]}</span>
+              <span>
+                <b>{name}</b>
+                <i>{note}</i>
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </Page>
+
+    <Page n={intro.page + 1} running={intro.title} class="pg-intro">
+      <h3 class="sub-title reveal">At a Glance</h3>
+      <dl class="facts">
+        {
+          profile.facts.map(([k, v]) => (
+            <div class="reveal">
+              <dt>{k}</dt>
+              <span class="leader" />
+              <dd>{v}</dd>
+            </div>
+          ))
+        }
+      </dl>
+      <blockquote class="quote reveal">
+        <p class="quote-text">{profile.quote.text}</p>
+        <p class="quote-by">{profile.quote.by}</p>
+      </blockquote>
+      <div class="text-center">
+        <button class="next-link reveal" type="button" data-goto={works.page}>Continue to Projects →</button>
+      </div>
+    </Page>
+
+    <!-- Projects -->
+    {
+      projectGroups.map((group, gi) => (
+        <Page n={works.page + gi} running={works.title} class="pg-projects">
+          {gi === 0 && <ChapterHead chapter={works} />}
+          {group.map((p) => {
+            const index = projects.indexOf(p);
+            return (
+              <article class="project reveal">
+                <span class:list={['project-tile', `tile-${p.memory.backdrop}`]}>
+                  <img src={p.memory.popup} alt="" loading="lazy" draggable="false" />
+                </span>
+                <div class="project-main">
+                  <h3 class="project-title">{p.title}</h3>
+                  <p class="project-kind">{p.kind}</p>
+                  <p class="project-desc">{p.desc}</p>
+                  <button class="project-link" type="button" data-goto={projectPage(index)} aria-label={`View details of ${p.title}`}>
+                    View details →
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </Page>
+      ))
+    }
+    {
+      listFiller && (
+        <Page n={works.page + projectListPages} class="pg-center" folio={false}>
+          <div class="text-center">
+            <div class="divider reveal"><span>✦</span></div>
+          </div>
+        </Page>
+      )
+    }
+
+    <!-- Project details: satu halaman per proyek -->
+    {
+      projects.map((p, i) => (
+        <Page n={projectPage(i)} running={details.title} class="pg-detail">
+          <ChapterHead
+            chapter={details}
+            kicker={i === 0 ? `Chapter ${details.numeral} · Project ${i + 1} of ${projects.length}` : `Project ${i + 1} of ${projects.length}`}
+            title={p.title}
+            subtitle={p.kind}
+          />
+          {p.image && (
+            <figure class="detail-figure reveal">
+              <img src={p.image} alt={`Screenshot of ${p.title}`} loading="lazy" />
+            </figure>
+          )}
+          <div class="detail-text">
+            {p.overview.map((t) => <p class="reveal">{t}</p>)}
+          </div>
+          <h3 class="sub-title reveal">Highlights</h3>
+          <ul class="detail-list">
+            {p.highlights.map((h) => <li class="reveal">{h}</li>)}
+          </ul>
+          {p.tags.length > 0 && (
+            <Fragment>
+              <h3 class="sub-title detail-built reveal">Built With</h3>
+              <ul class="detail-tags reveal">
+                {p.tags.map((t) => <li>{t}</li>)}
+              </ul>
+            </Fragment>
+          )}
+          {/* Tombol hanya muncul bila tautannya sudah diisi (bukan '#') */}
+          {(p.demo !== '#' || p.repo !== '#') && (
+            <div class="detail-actions reveal">
+              {p.demo !== '#' && <a class="end-btn" href={p.demo} target="_blank" rel="noopener">Live Demo</a>}
+              {p.repo !== '#' && <a class="end-btn" href={p.repo} target="_blank" rel="noopener">Source Code</a>}
+            </div>
+          )}
+        </Page>
+      ))
+    }
+    <!-- Halaman logo 3D: pintu menuju kenangan proyek -->
+    {
+      projects.map(
+        (p, i) =>
+          p.gallery?.length && p.memory && (
+            <Page n={projectPage(i) + 1} running={details.title} class="pg-center">
+              <div class="text-center">
+                <p class="kicker reveal">A Door to the Past</p>
+                <button class="memory-logo reveal" type="button" data-memory={i} aria-label={`Travel back through ${p.title} memories`}>
+                  <PopupLogo src={p.memory.popup} variant={p.memory.backdrop} />
+                  <span class="memory-cta">Touch the logo</span>
+                </button>
+                <p class="memory-note reveal">Wake the fireflies and travel back through {p.gallery.length} memories of {p.title}.</p>
+              </div>
+            </Page>
+          ),
+      )
+    }
+    {
+      detailFiller && (
+        <Page n={projectPage(projects.length)} class="pg-center" folio={false}>
+          <div class="text-center">
+            <div class="divider reveal"><span>✦</span></div>
+          </div>
+        </Page>
+      )
+    }
+
+    <!-- Skills -->
+    {
+      [skills.slice(0, 2), skills.slice(2)].map((group, gi) => (
+        <Page n={skillsCh.page + gi} running={skillsCh.title}>
+          {gi === 0 && <ChapterHead chapter={skillsCh} />}
+          {group.map((g) => (
+            <section class="skill-group reveal">
+              <h3 class="sub-title">{g.group}</h3>
+              <ul>
+                {g.items.map(([name, note]) => (
+                  <li class="skill">
+                    <span class="skill-name">{name}</span>
+                    <span class="leader" />
+                    <span class="skill-note">{note}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+          {gi === 1 && (
+            <div class="note reveal">
+              <p class="note-title">Excellence</p>
+              <p>I believe excellence is born from care — doing every task as well as it can be done, in every line of code and every pixel.</p>
+            </div>
+          )}
+        </Page>
+      ))
+    }
+
+    <!-- Journey -->
+    {
+      (['left', 'right'] as const).map((half, gi) => (
+        <Page n={journeyCh.page + gi} running={journeyCh.title} class="pg-map">
+          <JourneyMap half={half} chapter={journeyCh} milestones={[...journey].reverse()} />
+        </Page>
+      ))
+    }
+
+    <!-- Blog: dua halaman per tulisan -->
+    {
+      posts.map((post, i) => (
+        <Fragment>
+          <Page n={blogCh.page + i * 2} running={blogCh.title} class="pg-post">
+            {i === 0 ? <ChapterHead chapter={blogCh} kicker={`Chapter ${blogCh.numeral} · Note ${i + 1}`} /> : <p class="kicker reveal">Note {i + 1}</p>}
+            <article class="post">
+              <h3 class="post-title reveal">{post.title}</h3>
+              <p class="post-meta reveal">{post.date} · {post.readTime}</p>
+              <p class="post-lead reveal">{post.lead}</p>
+              {post.sections.slice(0, 2).map((sec) => (
+                <section class="post-section reveal">
+                  <h4>{sec.heading}</h4>
+                  <p>{sec.text}</p>
+                </section>
+              ))}
+            </article>
+          </Page>
+          <Page n={blogCh.page + i * 2 + 1} running={blogCh.title}>
+            <article class="post">
+              {post.sections.slice(2).map((sec) => (
+                <section class="post-section reveal">
+                  <h4>{sec.heading}</h4>
+                  <p>{sec.text}</p>
+                </section>
+              ))}
+              <blockquote class="post-quote reveal">“{post.quote}”</blockquote>
+              <p class="post-closing reveal">{post.closing}</p>
+              <p class="project-tags post-tags reveal">{post.tags.join(' · ')}</p>
+            </article>
+          </Page>
+        </Fragment>
+      ))
+    }
+
+    <!-- Contact -->
+    <Page n={contact.page} running={contact.title}>
+      <ChapterHead chapter={contact} />
+      <p class="reveal">Have an idea, a project, or just want to say hello? Send me a letter — I’d love to write back.</p>
+      <a class="mail reveal" href={`mailto:${profile.email}`}>
+        <span>Email</span>
+        <span>{profile.email}</span>
+      </a>
+      <ul>
+        {
+          socials.map((s) => (
+            <li class="reveal">
+              <a class="social" href={s.url} target="_blank" rel="noopener">
+                <b>{s.name}</b>
+                <span class="leader" />
+                <i>{s.handle}</i>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </Page>
+
+    <!-- Penutup -->
+    <Page n={contact.page + 1} class="pg-center">
+      <div class="text-center">
+        <p class="kicker reveal">End of the Story</p>
+        <p class="telos reveal">The End</p>
+        <div class="divider reveal"><span>✦</span></div>
+        <p class="front-role reveal">Thank you for reading this book.</p>
+        <div class="end-actions reveal">
+          <button class="end-btn" type="button" data-goto="1">Back to Contents</button>
+          <button class="end-btn" type="button" data-action="close">Close the Book</button>
+        </div>
+        <p class="colophon reveal">Crafted with Astro, Tailwind CSS, GSAP &amp; Three.js.</p>
+      </div>
+    </Page>
+  </div>
+
+  <script>
+    import { init } from '../scripts/main';
+    init();
+  </script>
+</Layout>

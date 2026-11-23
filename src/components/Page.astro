@@ -1,0 +1,18 @@
+---
+interface Props {
+  n: number;
+  running?: string;
+  folio?: boolean;
+  class?: string;
+}
+const { n, running, folio = true, class: cls } = Astro.props;
+---
+
+<template data-page={n}>
+  <div class:list={['pg', cls]}>
+    <div class="pg-frame" aria-hidden="true"></div>
+    {running && <div class="running">{running}</div>}
+    <div class="pg-body"><slot /></div>
+    {folio && <div class="folio">— {n + 1} —</div>}
+  </div>
+</template>

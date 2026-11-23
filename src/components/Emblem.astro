@@ -1,0 +1,22 @@
+---
+// Emblem pena bulu & buku — bentuknya sama dengan emblem di sampul 3D (lihat scripts/emblem.ts).
+import { EMBLEM } from '../scripts/emblem';
+
+interface Props {
+  class?: string;
+}
+const { class: cls } = Astro.props;
+---
+
+<svg class:list={['emblem', cls]} viewBox="0 0 200 200" aria-hidden="true">
+  <g class="emblem-panel">
+    {EMBLEM.panels.map((d) => <path d={d} />)}
+  </g>
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    {EMBLEM.strokes.map(([d, w]) => <path d={d} stroke-width={w} />)}
+  </g>
+  <g fill="currentColor">
+    {EMBLEM.fills.map((d) => <path d={d} />)}
+    {EMBLEM.dots.map(([x, y, r]) => <circle cx={x} cy={y} r={r} />)}
+  </g>
+</svg>

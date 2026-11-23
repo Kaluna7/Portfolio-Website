@@ -1,0 +1,45 @@
+---
+// Cincin astrolab emas di belakang buku pada landing page. Murni hiasan; berputar pelan lewat CSS.
+const polar = (r: number, deg: number) => {
+  const a = ((deg - 90) * Math.PI) / 180;
+  return [(r * Math.cos(a)).toFixed(1), (r * Math.sin(a)).toFixed(1)];
+};
+const ticks = Array.from({ length: 120 }, (_, i) => {
+  const [x1, y1] = polar(i % 10 === 0 ? 262 : 271, i * 3);
+  const [x2, y2] = polar(280, i * 3);
+  return { x1, y1, x2, y2, major: i % 10 === 0 };
+});
+const numerals = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+const rays = Array.from({ length: 24 }, (_, i) => {
+  const long = i % 3 === 0;
+  const [x, y] = polar(long ? 214 : 190, i * 15);
+  const [lx, ly] = polar(172, i * 15 - 2.2);
+  const [rx, ry] = polar(172, i * 15 + 2.2);
+  return `M${lx} ${ly}L${x} ${y}L${rx} ${ry}Z`;
+}).join('');
+---
+
+<svg class="astrolabe" viewBox="-300 -300 600 600" aria-hidden="true">
+  <g class="astro-outer" fill="none" stroke="currentColor">
+    <circle r="290" stroke-width="1.4" />
+    <circle r="283" stroke-width="0.6" />
+    <circle r="222" stroke-width="0.8" />
+    {ticks.map((t) => <path d={`M${t.x1} ${t.y1}L${t.x2} ${t.y2}`} stroke-width={t.major ? 1.6 : 0.6} />)}
+    {
+      numerals.map((n, i) => (
+        <text transform={`rotate(${i * 30}) translate(0 -240)`} text-anchor="middle" dominant-baseline="central" font-size="17" fill="currentColor" stroke="none">
+          {n}
+        </text>
+      ))
+    }
+  </g>
+  <g class="astro-inner" stroke="currentColor" fill="none">
+    <path d={rays} fill="currentColor" fill-opacity="0.35" stroke="none" />
+    <circle r="168" stroke-width="1" />
+    <circle r="160" stroke-width="0.6" stroke-dasharray="2 6" />
+    <ellipse rx="205" ry="92" stroke-width="0.7" transform="rotate(28)" />
+    <ellipse rx="205" ry="92" stroke-width="0.7" transform="rotate(-32)" />
+    <circle cx="181" cy="96" r="5" fill="currentColor" stroke="none" />
+    <circle cx="-174" cy="109" r="3.6" fill="currentColor" stroke="none" />
+  </g>
+</svg>
