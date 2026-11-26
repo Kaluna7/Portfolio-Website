@@ -5,7 +5,6 @@ import ChapterHead from '../components/ChapterHead.astro';
 import Emblem from '../components/Emblem.astro';
 import PopupLogo from '../components/PopupLogo.astro';
 import JourneyMap from '../components/JourneyMap.astro';
-import Astrolabe from '../components/Astrolabe.astro';
 import {
   chapters,
   posts,
@@ -29,10 +28,10 @@ const listFiller = projectListPages % 2 === 1;
 const detailFiller = detailPageCount % 2 === 1;
 ---
 
-<Layout title={`${profile.name} — Portfolio`} description={profile.tagline}>
+<Layout title={profile.name} description={profile.tagline}>
   <!-- Latar -->
   <div class="scene-bg pointer-events-none fixed inset-0" aria-hidden="true">
-    <div class="astro-wrap"><Astrolabe /></div>
+    <div class="book-glow"></div>
   </div>
 
   <canvas id="webgl" class="fixed inset-0 h-full w-full" aria-label="3D book"></canvas>
@@ -40,11 +39,6 @@ const detailFiller = detailPageCount % 2 === 1;
 
   <!-- Hero -->
   <header id="hero" class="hero pointer-events-none fixed inset-0 z-10">
-    <div class="hero-frame hero-reveal" aria-hidden="true">
-      <i></i><i></i><i></i><i></i>
-      <span>Portfolio · {profile.year}</span>
-    </div>
-
     <div class="hero-inner">
       <div class="hero-head">
         <p class="hero-kicker hero-reveal"><span>Works &amp; Stories</span></p>
@@ -288,7 +282,7 @@ const detailFiller = detailPageCount % 2 === 1;
           {/* Tombol hanya muncul bila tautannya sudah diisi (bukan '#') */}
           {(p.demo !== '#' || p.repo !== '#') && (
             <div class="detail-actions reveal">
-              {p.demo !== '#' && <a class="end-btn" href={p.demo} target="_blank" rel="noopener">Live Demo</a>}
+              {p.demo !== '#' && <a class="end-btn" href={p.demo} target="_blank" rel="noopener">{p.demoLabel ?? 'Live Demo'}</a>}
               {p.repo !== '#' && <a class="end-btn" href={p.repo} target="_blank" rel="noopener">Source Code</a>}
             </div>
           )}

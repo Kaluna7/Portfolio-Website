@@ -61,7 +61,7 @@ export const projects = [
     desc: 'A code editor where an AI agent writes the code, runs it, and checks the result.',
     overview: [
       'Grape is a code editor with an AI agent inside. You describe what you want in chat; the agent writes the code, runs it, and checks the result.',
-      'In a test run it turned an empty folder into a working to-do app in about a minute.',
+      'From one prompt it built a 3D eye that follows your cursor, in about 13 minutes. It also wrote around half of Mokabi.',
     ],
     highlights: [
       'Chat agent that plans, edits files, and runs commands',
@@ -73,10 +73,12 @@ export const projects = [
     image: '',
     memory: { logo: 'grape' as const, popup: '/projects/grape/logo-cutout.png', backdrop: 'sunburst' as const },
     gallery: [
-      { src: '/projects/grape/welcome.png', caption: 'The welcome screen: where every project begins' },
-      { src: '/projects/grape/agent-working.png', caption: 'From an empty folder, the agent writes each file as a diff to review' },
-      { src: '/projects/grape/agent-done.png', caption: 'Test run complete: 1m 6s, 53 steps, verified by the agent' },
-      { src: '/projects/grape/todo-app.png', caption: 'The to-do app the agent built' },
+      { src: '/projects/grape/new-ui.webp', caption: 'The new Grape: files, code, terminal, and the agent side by side' },
+      { src: '/projects/grape/agent-steps.webp', caption: 'One prompt, 12m 51s: the agent explains each step as it builds' },
+      { src: '/projects/grape/eye-emerald.webp', caption: 'Built by Grape: a 3D eye that follows the cursor' },
+      { src: '/projects/grape/eye-ember.webp', caption: 'The same eye in the Ember palette, looking the other way' },
+      { src: '/projects/mokabi/home.webp', caption: 'Around half of Mokabi was also built with Grape' },
+      { src: '/projects/grape/todo-app.png', caption: 'An earlier test: a to-do app made in about a minute' },
     ],
     demo: '#',
     repo: '#',
@@ -88,7 +90,7 @@ export const projects = [
     desc: 'Learn a language by chatting with AI, calling an AI teacher, and playing word games.',
     overview: [
       'Mokabi helps you learn a language by using it. You chat with AI characters, call an AI teacher, and play word games with real people.',
-      'A short setup matches the app to your language, level, and daily goal.',
+      'A short setup matches the app to your language, level, and daily goal. Around half of the app was built with Grape.',
     ],
     highlights: [
       'Chat with AI characters and teachers',
@@ -109,7 +111,8 @@ export const projects = [
       { src: '/projects/mokabi/call.webp', caption: 'A live voice call: practise speaking out loud' },
       { src: '/projects/mokabi/games.webp', caption: 'Word games to play against real people' },
     ],
-    demo: '#',
+    demo: 'https://play.google.com/store/apps/details?id=com.moocha&pcampaignid=web_share',
+    demoLabel: 'Get it on Google Play',
     repo: '#',
   },
   {
@@ -142,7 +145,7 @@ export const projects = [
       { src: '/projects/slark/integration.webp', caption: 'Integration guide: add the middleware and see attacks on the map' },
     ],
     demo: '#',
-    repo: 'https://github.com/Kaluna7/PrimeDefender',
+    repo: '#',
   },
   {
     title: 'Kias',
