@@ -867,19 +867,25 @@ body {
   .book.single .pg-detail .detail-actions { margin-top: calc(var(--u) * 1.6); }
 
   /* Keahlian */
-  .skill-group + .skill-group { margin-top: calc(var(--u) * 4); }
+  .skill-group + .skill-group { margin-top: calc(var(--u) * 2.6); }
+  .skill-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--u) * 1) calc(var(--u) * 2.4);
+  }
   .skill {
-    display: flex;
-    align-items: baseline;
-    gap: calc(var(--u) * 1.6);
-    padding: calc(var(--u) * 0.5) 0;
+    padding-left: calc(var(--u) * 1.6);
+    border-left: 2px solid rgba(138, 106, 42, 0.45);
+    line-height: 1.25;
   }
-  .skill-name { font-weight: 700; }
+  .skill-name { display: block; font-weight: 700; }
   .skill-note {
-    font-size: calc(var(--u) * 2.9);
+    display: block;
+    font-size: calc(var(--u) * 2.5);
     color: var(--color-wine);
-    text-align: right;
   }
+  .book.single .skill-group + .skill-group { margin-top: calc(var(--u) * 1.8); }
+  .book.single .skill-grid { gap: calc(var(--u) * 0.6) calc(var(--u) * 2); }
   .note {
     margin-top: calc(var(--u) * 5);
     padding: calc(var(--u) * 3.5);

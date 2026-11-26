@@ -58,27 +58,27 @@ export const projects = [
     title: 'Grape',
     kind: 'AI Agent IDE',
     year: '2026',
-    desc: 'A code editor where an AI agent writes the code, runs it, and checks the result.',
+    desc: 'A code editor with a built-in AI agent that turns a plain request into working code.',
     overview: [
-      'Grape is a code editor with an AI agent inside. You describe what you want in chat; the agent writes the code, runs it, and checks the result.',
-      'From one prompt it built a 3D eye that follows your cursor, in about 13 minutes. It also wrote around half of Mokabi.',
+      'Grape is a code editor with an AI agent built in. Describe what you want in plain words, and the agent plans the work, writes the code, runs it, and checks the result.',
+      'You stay in charge: every change is shown before it is kept. Grape built a 3D eye that follows your cursor, and around half of Mokabi.',
     ],
     highlights: [
-      'Chat agent that plans, edits files, and runs commands',
-      'Edits appear as diffs you can Keep or Undo',
-      'Approval step for terminal commands not yet allowed',
-      'Code search with embeddings computed inside the IDE',
+      'An agent that plans, writes files, and runs commands',
+      'Every change shown as a diff you can keep or undo',
+      'Asks for approval before running new commands',
+      'Smart code search that runs inside the editor',
     ],
     tags: ['VS Code', 'Electron', 'TypeScript', 'Go', 'WebSocket', 'DeepSeek'] as string[],
     image: '',
     memory: { logo: 'grape' as const, popup: '/projects/grape/logo-cutout.png', backdrop: 'sunburst' as const },
     gallery: [
       { src: '/projects/grape/new-ui.webp', caption: 'The new Grape: files, code, terminal, and the agent side by side' },
-      { src: '/projects/grape/agent-steps.webp', caption: 'One prompt, 12m 51s: the agent explains each step as it builds' },
+      { src: '/projects/grape/agent-steps.webp', caption: 'From one prompt: the agent explains each step as it builds' },
       { src: '/projects/grape/eye-emerald.webp', caption: 'Built by Grape: a 3D eye that follows the cursor' },
       { src: '/projects/grape/eye-ember.webp', caption: 'The same eye in the Ember palette, looking the other way' },
       { src: '/projects/mokabi/home.webp', caption: 'Around half of Mokabi was also built with Grape' },
-      { src: '/projects/grape/todo-app.png', caption: 'An earlier test: a to-do app made in about a minute' },
+      { src: '/projects/grape/todo-app.png', caption: 'An earlier test: a to-do app built from one prompt' },
     ],
     demo: '#',
     repo: '#',
@@ -281,10 +281,13 @@ export const chapters: Chapter[] = [
 
 // Setiap keahlian: [nama, keterangan singkat]. Dua kelompok pertama tampil di halaman kiri,
 // sisanya di halaman kanan.
+// Halaman pertama bab Skills memuat grup pertama; grup lainnya di halaman kedua.
 export const skills = [
   {
-    group: 'Frontend & Mobile',
+    group: 'Languages & Frontend',
     items: [
+      ['JavaScript', 'The language of the web'],
+      ['TypeScript', 'Typed JavaScript'],
       ['React', 'Web interfaces'],
       ['Next.js', 'Full-stack web apps'],
       ['React Native', 'Mobile apps'],
@@ -293,18 +296,27 @@ export const skills = [
     ] as [string, string][],
   },
   {
-    group: 'Languages',
+    group: 'Backend & Database',
     items: [
-      ['JavaScript', 'The language of the web'],
-      ['TypeScript', 'Typed JavaScript'],
+      ['Node.js', 'Servers & tooling'],
+      ['Express.js', 'Web servers'],
+      ['REST APIs', 'API design'],
+      ['WebSocket', 'Real-time features'],
+      ['MongoDB', 'Document database'],
+      ['PostgreSQL', 'Relational database'],
     ] as [string, string][],
   },
   {
-    group: 'Backend, AI & DevOps',
+    group: 'DevOps & AI Tools',
     items: [
-      ['Node.js', 'Servers & tooling'],
+      ['Docker', 'Containers'],
+      ['Jenkins', 'CI/CD pipelines'],
+      ['Linux', 'Servers & shell'],
+      ['Git', 'Version control'],
+      ['Cursor', 'AI code editor'],
+      ['AI Agents', 'Agents that use tools'],
+      ['LLM Integration', 'AI inside apps'],
       ['AI Development', 'Any tech stack'],
-      ['DevOps', 'Docker, Jenkins CI/CD, cloud deploys'],
     ] as [string, string][],
   },
   {

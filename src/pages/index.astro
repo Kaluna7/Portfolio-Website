@@ -319,24 +319,23 @@ const detailFiller = detailPageCount % 2 === 1;
 
     <!-- Skills -->
     {
-      [skills.slice(0, 2), skills.slice(2)].map((group, gi) => (
+      [skills.slice(0, 1), skills.slice(1)].map((group, gi) => (
         <Page n={skillsCh.page + gi} running={skillsCh.title}>
           {gi === 0 && <ChapterHead chapter={skillsCh} />}
           {group.map((g) => (
             <section class="skill-group reveal">
               <h3 class="sub-title">{g.group}</h3>
-              <ul>
+              <ul class="skill-grid">
                 {g.items.map(([name, note]) => (
                   <li class="skill">
                     <span class="skill-name">{name}</span>
-                    <span class="leader" />
                     <span class="skill-note">{note}</span>
                   </li>
                 ))}
               </ul>
             </section>
           ))}
-          {gi === 1 && (
+          {gi === 0 && (
             <div class="note reveal">
               <p class="note-title">Excellence</p>
               <p>I believe excellence is born from care — doing every task as well as it can be done, in every line of code and every pixel.</p>
