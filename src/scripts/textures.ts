@@ -21,17 +21,27 @@ export async function loadFonts() {
   await Promise.race([all, new Promise((r) => setTimeout(r, 4000))]);
 }
 
+// Phones get smaller textures: the full set is too much memory for a phone GPU.
+let textureScale = 1;
+export function setTextureScale(s: number) {
+  textureScale = s;
+}
+
+// Drawing code keeps using full size coordinates; the canvas itself is scaled.
 function make(w: number, h: number): [HTMLCanvasElement, Ctx] {
   const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  return [c, c.getContext('2d')!];
+  const s = w <= 64 ? 1 : textureScale;
+  c.width = Math.round(w * s);
+  c.height = Math.round(h * s);
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
+  ctx.scale(c.width / w, c.height / h);
+  return [c, ctx];
 }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
-function grain(ctx: Ctx, w: number, h: number, amount: number) {
-  const img = ctx.getImageData(0, 0, w, h);
+function grain(ctx: Ctx, _w: number, _h: number, amount: number) {
+  const img = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
   const d = img.data;
   for (let i = 0; i < d.length; i += 4) {
     const n = (Math.random() - 0.5) * amount;

@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { createScene } from './scene';
+import { createScene, type BookScene } from './scene';
 import { createReader } from './reader';
 import { createMusic } from './music';
 import { sfx } from './sfx';
@@ -91,7 +91,13 @@ export async function init() {
     },
     keysBlocked: () => memory.isOpen(),
   });
-  const scene = await createScene(canvas, { onBookClick: open });
+  // Without WebGL (old phone, GPU blocked) the book still opens, only without the 3D cover.
+  const scene: BookScene = await createScene(canvas, { onBookClick: open }).catch((err) => {
+    console.warn('3D book unavailable', err);
+    canvas.style.display = 'none';
+    const done = () => Promise.resolve();
+    return { setActive() {}, intro() {}, open: done, close: done };
+  });
 
   async function open() {
     if (state === 'intro') openQueued = true;

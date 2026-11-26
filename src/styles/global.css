@@ -82,6 +82,13 @@ body {
   }
   body.opening .book-glow { opacity: 0; }
 
+  /* Phones: blending a full screen layer over the 3D canvas and blurring behind buttons are
+     redrawn every frame and cost the most on a phone GPU. */
+  @media (pointer: coarse) {
+    .grain { mix-blend-mode: normal; opacity: 0.18; }
+    .reader-btn, .music-btn { backdrop-filter: none; }
+  }
+
   /* ── Hero ──────────────────────────────────────────────── */
   .gold-text {
     background: linear-gradient(100deg, #8a6a2a 0%, #f1d68f 22%, #b8913f 40%, #fff1c2 52%, #c9a24c 68%, #7a5a22 100%);

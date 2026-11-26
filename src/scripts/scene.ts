@@ -25,11 +25,34 @@ export type BookScene = {
   close(): Promise<unknown>;
 };
 
+// Phones and small laptops: fewer pixels, smaller textures, less dust.
+const nav = navigator as Navigator & { deviceMemory?: number };
+export const LOW_POWER =
+  window.matchMedia('(pointer: coarse)').matches ||
+  (nav.deviceMemory ?? 8) <= 4 ||
+  (navigator.hardwareConcurrency ?? 8) <= 4;
+
 export async function createScene(canvas: HTMLCanvasElement, opts: { onBookClick: () => void }): Promise<BookScene> {
   await T.loadFonts();
+  T.setTextureScale(LOW_POWER ? 0.5 : 1);
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: !LOW_POWER,
+    alpha: true,
+    powerPreference: LOW_POWER ? 'default' : 'high-performance',
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, LOW_POWER ? 1.5 : 2));
+
+  // If the phone takes the GPU away (memory, app switch), show the dark page instead of a broken
+  // canvas, and come back when the browser gives it back.
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    canvas.style.visibility = 'hidden';
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    canvas.style.visibility = '';
+  });
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -38,6 +61,7 @@ export async function createScene(canvas: HTMLCanvasElement, opts: { onBookClick
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
   scene.environmentIntensity = 0.45;
 
   const camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -53,7 +77,7 @@ export async function createScene(canvas: HTMLCanvasElement, opts: { onBookClick
   scene.add(key, rim, candle);
 
   // ── Material ────────────────────────────────────────────
-  const aniso = renderer.capabilities.getMaxAnisotropy();
+  const aniso = Math.min(renderer.capabilities.getMaxAnisotropy(), LOW_POWER ? 2 : 8);
   const tex = (c: HTMLCanvasElement, srgb = true) => {
     const t = new THREE.CanvasTexture(c);
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
@@ -122,7 +146,7 @@ export async function createScene(canvas: HTMLCanvasElement, opts: { onBookClick
   floatG.add(pivot);
 
   // ── Debu emas ──────────────────────────────────────────
-  const N = 380;
+  const N = LOW_POWER ? 140 : 380;
   const dustPos = new Float32Array(N * 3);
   const dustSpeed = new Float32Array(N);
   for (let i = 0; i < N; i++) {
