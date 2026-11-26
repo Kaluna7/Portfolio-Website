@@ -1320,8 +1320,10 @@ body {
   }
   /* Foto cetak: bingkai krem, seperti album lama */
   .memory-photo {
-    min-height: 0;
-    padding: clamp(6px, 1vw, 14px);
+    --mf: clamp(6px, 1vw, 14px);
+    flex: none; /* jangan menyusut: bingkai harus selalu membungkus foto */
+    margin: 0;
+    padding: var(--mf);
     background: #efe1c1;
     box-shadow: 0 30px 80px -15px #000, 0 0 70px -15px rgba(255, 190, 110, 0.5);
   }
@@ -1329,12 +1331,13 @@ body {
     display: block;
     width: auto;
     height: auto;
-    max-width: min(88vw, 1120px);
-    max-height: calc(100vh - 14rem);
+    max-width: min(calc(88vw - 2 * var(--mf)), 1120px);
+    max-height: calc(100vh - 16rem - 2 * var(--mf));
+    max-height: calc(100dvh - 16rem - 2 * var(--mf));
   }
-  /* Screenshot HP: sudut layar membulat di dalam bingkai foto */
-  .memory-photo.is-tall { border-radius: 14px; }
-  .memory-photo.is-tall img { border-radius: 10px; }
+  /* Screenshot HP: sudut layar membulat, bingkai mengikuti lengkungannya */
+  .memory-photo.is-tall { border-radius: calc(12px + var(--mf)); }
+  .memory-photo.is-tall img { border-radius: 12px; }
   .memory-caption {
     max-width: 44rem;
     min-height: 1.6em;
